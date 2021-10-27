@@ -1,0 +1,43 @@
+name: classifiedapp
+description: A new Flutter project.
+
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.12.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  get: 
+  # imagebutton: ^0.0.
+  image_picker: ^0.8.4+2
+  url_launcher: ^6.0.12
+  firebase_core: 
+  firebase_auth: 
+  cloud_firestore:
+  firebase_messaging:
+  # get_store:
+  # url_launched:
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^1.0.0
+
+flutter:
+
+  uses-material-design: true
+
+  
+  assets:
+    - images/logo.png
+    - images/background.png
+    - images/profile.jfif
