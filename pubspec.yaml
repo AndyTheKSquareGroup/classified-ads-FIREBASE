@@ -23,6 +23,7 @@ dependencies:
   firebase_auth: 
   cloud_firestore:
   firebase_messaging:
+  firebase_storage: ^10.0.6
   # get_store:
   # url_launched:
 

@@ -3,32 +3,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:classifiedapp/views/auth/register_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:classifiedapp/views/admin/home_view.dart';
 
+// ignore: must_be_immutable
 class LoginScreen extends StatelessWidget {
   LoginScreen({Key? key}) : super(key: key);
-  // final TextEditingController _emailCtrl = TextEditingController();
-  // final TextEditingController _passwordCtrl = TextEditingController();
-
-  // LOGIN WITH FIREBASE
-  // login() {
-  //   FirebaseAuth.instance
-  //       .signInWithEmailAndPassword(
-  //           email: _emailCtrl.text, password: _passwordCtrl.text)
-  //       .then((value) {
-  //     print("Login Success");
-  //     Get.to(HomeAdsScreen());
-  //   }).catchError((e) {
-  //     print(e);
-  //   });
-  // }
-
+  // CONTROLLERS
   TextEditingController _emailCtrl = TextEditingController();
   TextEditingController _passwordCtrl = TextEditingController();
-
-  // Auth _auth = Get.put(Auth());
-
+  //FUNCTION ENTER TO APP
   login() {
     FirebaseAuth.instance
         .signInWithEmailAndPassword(
@@ -40,27 +22,6 @@ class LoginScreen extends StatelessWidget {
       print(e);
     });
   }
-
-  // register() {
-  //   FirebaseAuth.instance
-  //       .createUserWithEmailAndPassword(
-  //           email: _emailCtrl.text, password: _passwordCtrl.text)
-  //       .then((res) {
-  //     print("Register Success");
-  //     // FirebaseFirestore.instance.collection("users").add({
-  //     //   "email": _emailCtrl.text,
-  //     //   "uid": res.user?.uid,
-  //     // });
-  //     var uid = res.user?.uid;
-  //     FirebaseFirestore.instance.collection("users").doc(uid).set({
-  //       "email": _emailCtrl.text,
-  //       "uid": res.user?.uid,
-  //     });
-  //     // Get.to(HomeScreen());
-  //   }).catchError((e) {
-  //     print(e);
-  //   });
-  // }
 
   @override
   Widget build(BuildContext context) {

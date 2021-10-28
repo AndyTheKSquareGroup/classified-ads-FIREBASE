@@ -1,96 +1,82 @@
 import 'package:classifiedapp/views/admin/home_view.dart';
-import 'package:classifiedapp/views/admin/show_images_view.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:io';
+import 'dart:math';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:classifiedapp/services/auth.dart';
-import '../../services/auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // ignore: must_be_immutable
 class EditAdsScreen extends StatefulWidget {
-  var adInfo = {};
-  EditAdsScreen({
-    required this.adInfo,
-  });
+  var image = [];
+  String title = "";
+  String description = "";
+  String price = "";
+  String phone = "";
+  EditAdsScreen(
+      {required this.image,
+      required this.title,
+      required this.description,
+      required this.price,
+      required this.phone});
 
   _EditAdsScreenState createState() => _EditAdsScreenState();
 }
 
 class _EditAdsScreenState extends State<EditAdsScreen> {
   // FUCNTION FOR GETTING MY ADS
-  final Auth _auth = Get.put(Auth());
-  var apiURLAds;
   editMyAds() {
-    var body = json.encode({
+    var uid = FirebaseAuth.instance.currentUser!.uid;
+
+    FirebaseFirestore.instance.collection("ads").doc(uid).update({
       "title": _titleAds.text,
       "price": _priceAds.text,
-      "mobile": _mobileContactAds.text,
+      "phoneNumber": _mobileContactAds.text,
       "description": _decriptionAds.text,
-      "images": updatedImg,
+      "imageURL": updatedImg,
+    }).then((value) {
+      print("Update Ad");
     });
-    try {
-      var token = _auth.token.value;
-      http
-          .patch(
-        apiURLAds,
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
-        body: body,
-      )
-          .then((res) {
-        var data = json.decode(res.body);
-        _auth.set(data["data"]["token"]);
-        Get.offAll(HomeAdsScreen());
-      }).catchError((e) {
-        print(e);
-      });
-    } catch (e) {
-      print(e);
-    }
   }
 
   //UPLOAD IMAGES
   var updatedImg = [];
 
   getImages() async {
-    try {
-      var images = await ImagePicker().pickMultiImage();
-      var request = http.MultipartRequest(
-        "POST",
-        Uri.parse("https://adlisting.herokuapp.com/upload/photos"),
-      );
-      images!.forEach((image) async {
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            "photos",
-            image.path,
-          ),
-        );
-      });
-      var response = await http.Response.fromStream(await request.send());
-      var data = json.decode(response.body);
-
-      setState(() {
-        updatedImg = data["data"]["path"];
-      });
-    } catch (e) {}
+    var picker = ImagePicker();
+    var pickedFiles = await picker.pickMultiImage();
+    if (pickedFiles!.isNotEmpty) {
+      updatedImg.clear();
+      for (var image in pickedFiles) {
+        File img = File(image.path);
+        var rng = Random();
+        FirebaseStorage.instance
+            .ref()
+            .child("imageURL")
+            .child(rng.nextInt(10000).toString())
+            .putFile(img)
+            .then((res) {
+          res.ref.getDownloadURL().then((url) {
+            setState(() {
+              updatedImg.add(url);
+            });
+          });
+        }).catchError((e) {});
+      }
+    }
   }
 
   //RECOVERED DATAS
   @override
   void initState() {
     setState(() {
-      _titleAds.text = widget.adInfo["title"];
-      _priceAds.text = widget.adInfo["price"].toString();
-      _mobileContactAds.text = widget.adInfo["mobile"];
-      _decriptionAds.text = widget.adInfo["description"];
-      updatedImg = widget.adInfo["images"];
-      var id = widget.adInfo["_id"];
-      apiURLAds = Uri.parse("https://adlisting.herokuapp.com/ads/$id");
+      _titleAds.text = widget.title;
+      _decriptionAds.text = widget.description;
+      _priceAds.text = widget.price;
+      _mobileContactAds.text = widget.phone;
+      // userID = widget.user;
     });
     super.initState();
   }
@@ -131,6 +117,9 @@ class _EditAdsScreenState extends State<EditAdsScreen> {
                         controller: _titleAds,
                         obscureText: false,
                         keyboardType: TextInputType.text,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                        ),
                       ),
                     ),
                     //ADS' PRICE
@@ -140,6 +129,9 @@ class _EditAdsScreenState extends State<EditAdsScreen> {
                         controller: _priceAds,
                         obscureText: false,
                         keyboardType: TextInputType.text,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                        ),
                       ),
                     ),
                     //ADS' MOBILE
@@ -149,6 +141,9 @@ class _EditAdsScreenState extends State<EditAdsScreen> {
                         controller: _mobileContactAds,
                         obscureText: false,
                         keyboardType: TextInputType.text,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                        ),
                       ),
                     ),
                     //ADS' DESCRIPTION
@@ -160,6 +155,9 @@ class _EditAdsScreenState extends State<EditAdsScreen> {
                         controller: _decriptionAds,
                         obscureText: false,
                         keyboardType: TextInputType.text,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                        ),
                       ),
                     ),
                     // BUTTON ENTER TO APP
@@ -250,13 +248,7 @@ class _EditAdsScreenState extends State<EditAdsScreen> {
         itemCount: updatedImg.length,
         itemBuilder: (bc, index) {
           return GestureDetector(
-            onTap: () {
-              Get.to(
-                ShowOnlyImagesScreen(
-                  img: updatedImg[0],
-                ),
-              );
-            },
+            onTap: () {},
             child: Container(
               width: 120,
               height: 120,

@@ -1,17 +1,19 @@
-import 'package:classifiedapp/services/auth.dart';
+import 'package:classifiedapp/views/auth/login_view.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'dart:convert';
-import '../../services/auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
+import 'dart:math';
 
 // ignore: must_be_immutable
 class EditProfileScreen extends StatefulWidget {
-  var profileData = {};
+  // var profileData = {};
   EditProfileScreen({
     Key? key,
-    required this.profileData,
+    // required this.profileData,
   }) : super(key: key);
   @override
   _EditProfileScreenState createState() => _EditProfileScreenState();
@@ -23,63 +25,44 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   TextEditingController _emailCtrl = TextEditingController();
   TextEditingController _mobileCtrl = TextEditingController();
 
-  // FUNCTION CHANGE PROFILE'S PHOTO
-  changePhoto() async {
-    try {
-      var photo = await ImagePicker().pickImage(source: ImageSource.gallery);
-      var request = http.MultipartRequest(
-          "POST", Uri.parse("https://adlisting.herokuapp.com/upload/profile"));
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          "avatar",
-          photo!.path,
-        ),
-      );
-      var response = await http.Response.fromStream(await request.send());
-      var data = json.decode(response.body);
-      var imgURL = data["data"]["path"];
-      setState(() {
-        widget.profileData["imgURL"] = imgURL;
-      });
-    } catch (e) {}
+  //INIT GET INFORMATION PROFILE
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    readUserData();
+  }
+
+  //GET INFORMATION PROFILE
+  readUserData() {
+    var uid = FirebaseAuth.instance.currentUser!.uid;
+    FirebaseFirestore.instance.collection("users").doc(uid).get().then((user) {
+      print(user.data());
+      var userData = user.data()!;
+      _nameUserCrtl.text = userData["username"];
+      _emailCtrl.text = userData["email"];
+      _mobileCtrl.text = userData["phoneNumber"];
+    });
   }
 
   // FUNCTION  UPDATE INFO PROFILE
-  Auth _auth = Get.put(Auth());
-  changeInfoProfile() async {
-    var body = json.encode({
-      "name": _nameUserCrtl.text,
+  changeInfoProfile() {
+    var uid = FirebaseAuth.instance.currentUser!.uid;
+
+    FirebaseFirestore.instance.collection("users").doc(uid).update({
+      "username": _nameUserCrtl.text,
       "email": _emailCtrl.text,
-      "mobile": _mobileCtrl.text,
-      "imgURL": widget.profileData["imgURL"],
+      "phoneNumber": _mobileCtrl.text
+    }).then((value) {
+      print("Update");
     });
-    try {
-      var token = _auth.token.value;
-      await http
-          .patch(
-        Uri.parse("https://adlisting.herokuapp.com/user/"),
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
-        body: body,
-      )
-          .then((res) {
-        var data = json.decode(res.body);
-        print("succes");
-      }).catchError((e) {});
-    } catch (e) {}
   }
 
-  // INIT
-  @override
-  void initState() {
-    setState(() {
-      _nameUserCrtl.text = widget.profileData["name"];
-      _emailCtrl.text = widget.profileData["email"];
-      _mobileCtrl.text = widget.profileData["mobile"];
+  // EXIT APP
+  logout() {
+    FirebaseAuth.instance.signOut().then((value) {
+      Get.offAll(LoginScreen());
     });
-    super.initState();
   }
 
   @override
@@ -105,12 +88,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   width: 120,
                   child: GestureDetector(
                     onTap: () {
-                      changePhoto();
+                      // changePhoto();
                     },
                     child: CircleAvatar(
-                      backgroundImage: NetworkImage(
-                        widget.profileData["imgURL"],
-                      ),
+                      backgroundImage: AssetImage("images/profile.jfif"),
                     ),
                   ),
                 ),
@@ -180,7 +161,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                 // CREATE NEW ACCOUNT
                 TextButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    logout();
+                  },
                   child: Text(
                     "Logout",
                     style: TextStyle(

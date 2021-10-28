@@ -2,10 +2,10 @@ import 'package:classifiedapp/views/admin/home_view.dart';
 import 'package:classifiedapp/views/auth/login_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import '../../services/auth.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
+// ignore: must_be_immutable
 class SingUpScreen extends StatelessWidget {
   SingUpScreen({Key? key}) : super(key: key);
 
@@ -16,29 +16,24 @@ class SingUpScreen extends StatelessWidget {
   final TextEditingController _passwordCtrl = TextEditingController();
 
   //FUNCTION FOR CREATING A NEW ACCOUNT
-  Auth _auth = Get.put(Auth());
   createNewAccount() {
-    var body = json.encode({
-      "name": _fullNameCtrl.text,
-      "email": _emailCtrl.text,
-      "password": _passwordCtrl.text,
-      "mobile": _mobileNumberCtrl.text,
+    FirebaseAuth.instance
+        .createUserWithEmailAndPassword(
+            email: _emailCtrl.text, password: _passwordCtrl.text)
+        .then((res) {
+      print("Success");
+      var uid = res.user?.uid;
+      FirebaseFirestore.instance.collection("users").doc(uid).set({
+        "email": _emailCtrl.text,
+        "uid": res.user?.uid,
+        "username": _fullNameCtrl.text,
+        "phoneNumber": _mobileNumberCtrl.text,
+        "password": _passwordCtrl.text,
+      });
+      Get.to(HomeAdsScreen());
+    }).catchError((e) {
+      print(e);
     });
-    try {
-      http
-          .post(
-        Uri.parse("https://adlisting.herokuapp.com/auth/register"),
-        headers: {
-          "Content-type": "application/json",
-        },
-        body: body,
-      )
-          .then((res) {
-        var data = json.decode(res.body);
-        _auth.token.value = data["data"]["token"];
-        Get.offAll(HomeAdsScreen());
-      }).catchError((e) {});
-    } catch (e) {}
   }
 
   @override

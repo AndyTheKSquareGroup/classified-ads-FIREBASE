@@ -1,13 +1,15 @@
-import 'dart:convert';
 import 'package:classifiedapp/views/admin/home_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../services/auth.dart';
-import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
+import 'dart:math';
 
 class CreateAdScreen extends StatefulWidget {
-  const CreateAdScreen({Key? key}) : super(key: key);
+  CreateAdScreen({Key? key}) : super(key: key);
   @override
   _CreateAdScreenState createState() => _CreateAdScreenState();
 }
@@ -20,58 +22,46 @@ class _CreateAdScreenState extends State<CreateAdScreen> {
   TextEditingController _decriptionAdsCtrl = TextEditingController();
 
   //TOKEN TO CREATE ADS LOGIN
-  Auth _auth = Get.put(Auth());
-  createAds() async {
-    var body = json.encode({
+  createMyAds() {
+    FirebaseFirestore.instance.collection("ads").add({
       "title": _titleAdsCtrl.text,
       "description": _decriptionAdsCtrl.text,
       "price": _priceAdsCtrl.text,
-      "mobile": _mobileContactAdsCtrl.text,
-      "images": imagesAds
+      "phoneNumber": _mobileContactAdsCtrl.text,
+      "uid": FirebaseAuth.instance.currentUser!.uid,
+      "imageURL": imagesAds,
+    }).then((value) {
+      print("Added");
+    }).catchError((e) {
+      print(e);
     });
-    try {
-      var token = _auth.token.value;
-      await http
-          .post(
-        Uri.parse("https://adlisting.herokuapp.com/ads"),
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
-        body: body,
-      )
-          .then((res) {
-        var data = json.decode(res.body);
-        print(data);
-        Get.offAll(HomeAdsScreen());
-      }).catchError((e) {});
-    } catch (e) {}
   }
 
   // CAPTURE IMAGE
   var imagesAds = [];
-  captureImages() async {
-    try {
-      var capturedImages = await ImagePicker().pickMultiImage();
-      var redRequest = http.MultipartRequest(
-        "POST",
-        Uri.parse("https://adlisting.herokuapp.com/upload/photos"),
-      );
-      capturedImages!.forEach((photo) async {
-        redRequest.files.add(
-          await http.MultipartFile.fromPath(
-            "photos",
-            photo.path,
-          ),
-        );
-      });
-      var result = await http.Response.fromStream(await redRequest.send());
-      var data = json.decode(result.body);
 
-      setState(() {
-        imagesAds = data["data"]["path"];
-      });
-    } catch (e) {}
+  captureImages() async {
+    var picker = ImagePicker();
+    var pickedFiles = await picker.pickMultiImage();
+    if (pickedFiles!.isNotEmpty) {
+      imagesAds.clear();
+      for (var image in pickedFiles) {
+        File img = File(image.path);
+        var rng = Random();
+        FirebaseStorage.instance
+            .ref()
+            .child("images")
+            .child(rng.nextInt(10000).toString())
+            .putFile(img)
+            .then((res) {
+          res.ref.getDownloadURL().then((url) {
+            setState(() {
+              imagesAds.add(url);
+            });
+          });
+        }).catchError((e) {});
+      }
+    }
   }
 
   @override
@@ -155,7 +145,7 @@ class _CreateAdScreenState extends State<CreateAdScreen> {
                       margin: EdgeInsets.symmetric(vertical: 5, horizontal: 15),
                       child: ElevatedButton(
                         onPressed: () {
-                          createAds();
+                          createMyAds();
                         },
                         style: ElevatedButton.styleFrom(
                             minimumSize: const Size(double.infinity, 50),

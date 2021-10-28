@@ -1,11 +1,10 @@
 import 'package:classifiedapp/views/admin/info_ads_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import '../../services/auth.dart';
 import 'package:classifiedapp/views/admin/create_ads_view.dart';
 import 'package:classifiedapp/views/admin/settings_view.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeAdsScreen extends StatefulWidget {
   HomeAdsScreen({Key? key}) : super(key: key);
@@ -14,57 +13,28 @@ class HomeAdsScreen extends StatefulWidget {
 }
 
 class _HomeAdsScreenState extends State<HomeAdsScreen> {
-  // SAVE USER´S TOKEN
-  Auth _auth = Get.put(Auth());
-
 //  FUNCTION GET ADS' LISTING
-  List _ads = [];
-  getAllAds() async {
-    try {
-      var token = _auth.token.value;
-      print(token);
-
-      http.get(Uri.parse("https://adlisting.herokuapp.com/ads"), headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token"
-      }).then((res) {
-        print(res.body);
-        var resp = json.decode(res.body);
-        setState(() {
-          _ads = resp["data"];
-          getProfileData();
+  var _allAds = [];
+  getAllAds() {
+    var uid = FirebaseAuth.instance.currentUser!.uid;
+    FirebaseFirestore.instance.collection("ads").get().then((res) {
+      var allAds = [];
+      res.docs.forEach((ad) {
+        allAds.add({
+          "title": ad.data()["title"],
+          "description": ad.data()["description"],
+          "price": ad.data()["price"],
+          "imageURL": ad.data()["imageURL"]
         });
-        print(resp);
-      }).catchError((e) {
-        print(e);
       });
-    } catch (e) {
+      setState(() {
+        _allAds = allAds;
+      });
+    }).catchError((e) {
       print(e);
-    }
+    });
   }
 
-  //INFO PROFILE
-  var _profileUser = {};
-  getProfileData() {
-    try {
-      var token = _auth.token.value;
-      http.post(
-        Uri.parse("https://adlisting.herokuapp.com/user/profile"),
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
-      ).then((res) {
-        var data = json.decode(res.body);
-        setState(() {
-          var data = json.decode(res.body);
-          _profileUser = data["data"];
-        });
-      }).catchError((e) {});
-    } catch (e) {}
-  }
-
-  //INIT ADS
   @override
   void initState() {
     getAllAds();
@@ -89,20 +59,18 @@ class _HomeAdsScreenState extends State<HomeAdsScreen> {
             //ACCESS TO SETTINGS
             onPressed: () {
               Get.to(
-                SettingsScreen(
-                  userLoginData: _profileUser,
-                ),
+                SettingsScreen(),
               );
             },
             child: CircleAvatar(
-              backgroundImage: NetworkImage(_profileUser["imgURL"]),
+              backgroundImage: AssetImage("images/profile.jfif"),
             ),
           ),
         ],
         automaticallyImplyLeading: false,
       ),
       body: GridView.builder(
-        itemCount: _ads.length,
+        itemCount: _allAds.length,
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: 12,
@@ -113,12 +81,12 @@ class _HomeAdsScreenState extends State<HomeAdsScreen> {
             onTap: () {
               Get.to(
                 InfoAdsScreen(
-                  imgURL: _ads[index]["images"][0],
-                  title: _ads[index]['title'],
-                  description: _ads[index]['description'],
-                  price: _ads[index]['price'].toString(),
-                  authorName: _ads[index]['authorName'],
-                  numberPhone: _ads[index]["mobile"],
+                  imgURL: _allAds[index]["imageURL"][0],
+                  title: _allAds[index]['title'],
+                  description: _allAds[index]['description'],
+                  price: _allAds[index]['price'].toString(),
+                  authorName: _allAds[index]['authorName'],
+                  numberPhone: _allAds[index]["phoneNumber"],
                 ),
               );
             },
@@ -130,7 +98,7 @@ class _HomeAdsScreenState extends State<HomeAdsScreen> {
                     height: double.infinity,
                     width: double.infinity,
                     child: Image.network(
-                      _ads[index]['images'][0],
+                      _allAds[index]['imageURL'][0],
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -152,7 +120,7 @@ class _HomeAdsScreenState extends State<HomeAdsScreen> {
                                 child: Container(
                                   margin: EdgeInsets.symmetric(vertical: 5),
                                   child: Text(
-                                    _ads[index]['title'],
+                                    _allAds[index]['title'],
                                     overflow: TextOverflow.fade,
                                     style: TextStyle(
                                       fontSize: 11,
@@ -165,7 +133,7 @@ class _HomeAdsScreenState extends State<HomeAdsScreen> {
                                 child: Container(
                                   margin: EdgeInsets.only(top: 2, left: 5),
                                   child: Text(
-                                    _ads[index]['price'].toString(),
+                                    _allAds[index]['price'].toString(),
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                         color: Colors.orange,
